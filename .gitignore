@@ -1,0 +1,17 @@
+# Vue / Node
+node_modules/
+dist/
+.env
+.env.*
+
+# Go
+*.exe
+*.out
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
