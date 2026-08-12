@@ -5,6 +5,7 @@ import (
 
 	"task-management/database"
 	"task-management/models"
+	"task-management/utils"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -119,8 +120,17 @@ func Login(ctx *gin.Context) {
 	}
 
 	// Password correct hai
+	token, err := utils.GenerateToken(user.ID)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Could not generate token",
+		})
+		return
+	}
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
+		"token":   token,
 		"user": gin.H{
 			"id":    user.ID,
 			"name":  user.Name,

@@ -3,6 +3,7 @@ package main
 import (
 	"task-management/controllers"
 	"task-management/database"
+	"task-management/middleware"
 	"task-management/models"
 
 	"github.com/gin-contrib/cors"
@@ -30,16 +31,26 @@ func main() {
 
 	api := router.Group("/api")
 
-	// Auth
+	// =========================
+	// PUBLIC ROUTES
+	// =========================
+
 	api.POST("/register", controllers.Register)
 	api.POST("/login", controllers.Login)
 
-	// Tasks
-	api.POST("/tasks", controllers.CreateTask)
-	api.GET("/tasks", controllers.GetDataTask)
-	api.GET("/tasks/:id", controllers.GetTask)
-	api.PUT("/tasks/:id", controllers.UpdateTask)
-	api.DELETE("/tasks/:id", controllers.DeleteTask)
+	// =========================
+	// PROTECTED ROUTES
+	// =========================
 
+	protected := api.Group("/")
+	protected.Use(middleware.AuthMiddleware())
+
+	protected.POST("/tasks", controllers.CreateTask)
+	protected.GET("/tasks", controllers.GetDataTask)
+	protected.GET("/tasks/:id", controllers.GetTask)
+	protected.PUT("/tasks/:id", controllers.UpdateTask)
+	protected.DELETE("/tasks/:id", controllers.DeleteTask)
+
+	// Start server
 	router.Run(":8080")
 }

@@ -1,4 +1,4 @@
-<script setup>
+<!-- <script setup>
 import { onMounted, ref, computed } from "vue";
 
 const tasks = ref([]);
@@ -32,24 +32,26 @@ const ringOffset = computed(
 );
 
 async function getTasks() {
-  loadingTasks.value = true;
+  const token = localStorage.getItem("token");
 
-  try {
-    const response = await fetch(
-      "http://localhost:8080/api/tasks"
-    );
+  const response = await fetch("http://localhost:8080/api/tasks", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-    if (!response.ok) {
-      throw new Error("Failed to load tasks");
-    }
+  const data = await response.json();
 
-    tasks.value = await response.json();
-  } catch (error) {
-    errorMsg.value =
-      "Couldn't load your tasks. Refresh to try again.";
-  } finally {
-    loadingTasks.value = false;
+  console.log("TASK RESPONSE:", data);
+
+  if (!response.ok) {
+    console.error("TASK ERROR:", data);
+    return;
   }
+
+  // yahan apne tasks set karo
+  console.log(data);
 }
 
 async function addTask() {
@@ -149,8 +151,293 @@ async function toggleTask(task) {
 onMounted(() => {
   getTasks();
 });
-</script>
+</script> -->
 
+<script setup>
+import { onMounted, ref, computed } from "vue";
+
+const tasks = ref([]);
+const loadingTasks = ref(true);
+
+const title = ref("");
+const description = ref("");
+const adding = ref(false);
+const errorMsg = ref("");
+
+const total = computed(() => tasks.value.length);
+
+const completed = computed(() =>
+  tasks.value.filter((task) => task.complete).length
+);
+
+const percent = computed(() => {
+  if (total.value === 0) {
+    return 0;
+  }
+
+  return Math.round((completed.value / total.value) * 100);
+});
+
+// =========================
+// SVG RING
+// =========================
+
+const ringRadius = 22;
+const ringCircumference = 2 * Math.PI * ringRadius;
+
+const ringOffset = computed(() => {
+  return ringCircumference -
+    (percent.value / 100) * ringCircumference;
+});
+
+// =========================
+// TOKEN
+// =========================
+
+function getToken() {
+  return localStorage.getItem("token");
+}
+
+// =========================
+// GET TASKS
+// =========================
+
+async function getTasks() {
+  loadingTasks.value = true;
+  errorMsg.value = "";
+
+  try {
+    const token = getToken();
+
+    // Token nahi mila
+    if (!token) {
+      errorMsg.value = "Please login first.";
+      return;
+    }
+
+    const response = await fetch(
+      "http://localhost:8080/api/tasks",
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    // console.log("GET TASKS RESPONSE:", data);
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to load tasks"
+      );
+    }
+
+    // ⭐ Backend se aaye tasks ko Vue mein save karo
+    tasks.value = data;
+
+  } catch (error) {
+    console.error("GET TASKS ERROR:", error);
+
+    errorMsg.value =
+      error.message || "Couldn't load tasks.";
+  } finally {
+    loadingTasks.value = false;
+  }
+}
+
+// =========================
+// ADD TASK
+// =========================
+
+async function addTask() {
+  errorMsg.value = "";
+
+  if (!title.value.trim()) {
+    errorMsg.value =
+      "Give the task a title before adding it.";
+    return;
+  }
+
+  try {
+    adding.value = true;
+
+    const token = getToken();
+
+    if (!token) {
+      errorMsg.value = "Please login first.";
+      return;
+    }
+
+    const response = await fetch(
+      "http://localhost:8080/api/tasks",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+
+          // ⭐ JWT
+          "Authorization": `Bearer ${token}`,
+        },
+
+        body: JSON.stringify({
+          title: title.value,
+          description: description.value,
+          complete: false,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    // console.log("CREATE TASK RESPONSE:", data);
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to add task"
+      );
+    }
+
+    // ⭐ New task list ke beginning mein
+    tasks.value.unshift(data);
+
+    // Form clear
+    title.value = "";
+    description.value = "";
+
+  } catch (error) {
+    console.error("CREATE TASK ERROR:", error);
+
+    errorMsg.value =
+      error.message ||
+      "Couldn't add that task. Try again.";
+
+  } finally {
+    adding.value = false;
+  }
+}
+
+// =========================
+// DELETE TASK
+// =========================
+
+async function deleteTask(id) {
+  errorMsg.value = "";
+
+  try {
+    const token = getToken();
+
+    if (!token) {
+      errorMsg.value = "Please login first.";
+      return;
+    }
+
+    const response = await fetch(
+      `http://localhost:8080/api/tasks/${id}`,
+      {
+        method: "DELETE",
+
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    // console.log("DELETE RESPONSE:", data);
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to delete task"
+      );
+    }
+
+    // ⭐ Deleted task ko frontend list se remove karo
+    tasks.value = tasks.value.filter(
+      (task) => task.id !== id
+    );
+
+  } catch (error) {
+    // console.error("DELETE TASK ERROR:", error);
+
+    errorMsg.value =
+      error.message ||
+      "Couldn't delete that task. Try again.";
+  }
+}
+
+// =========================
+// TOGGLE TASK
+// =========================
+
+async function toggleTask(task) {
+  errorMsg.value = "";
+
+  try {
+    const token = getToken();
+
+    if (!token) {
+      errorMsg.value = "Please login first.";
+      return;
+    }
+
+    const newCompleteValue = !task.complete;
+
+    const response = await fetch(
+      `http://localhost:8080/api/tasks/${task.id}`,
+      {
+        method: "PUT",
+
+        headers: {
+          "Content-Type": "application/json",
+
+          // ⭐ JWT
+          "Authorization": `Bearer ${token}`,
+        },
+
+        body: JSON.stringify({
+          title: task.title,
+          description: task.description,
+          complete: newCompleteValue,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    // console.log("UPDATE TASK RESPONSE:", data);
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to update task"
+      );
+    }
+
+    // ⭐ Backend successful hone ke baad state update
+    task.complete = newCompleteValue;
+
+  } catch (error) {
+    console.error("UPDATE TASK ERROR:", error);
+
+    errorMsg.value =
+      error.message ||
+      "Couldn't update that task. Try again.";
+  }
+}
+
+// =========================
+// PAGE LOAD
+// =========================
+
+onMounted(() => {
+  getTasks();
+});
+</script>
 <template>
   <div class="page">
 

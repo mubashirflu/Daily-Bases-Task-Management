@@ -76,11 +76,14 @@ async function login() {
 
     const data = await response.json();
 
-    if (response.ok) {
-      router.push("/dashboard");
-    } else {
+    if (!response.ok) {
       errorMsg.value = data.error || "Couldn't log you in. Check your details and try again.";
-    }
+      return;
+    } 
+     localStorage.setItem("token", data.token);
+
+    // console.log("TOKEN SAVED:", localStorage.getItem("token"));
+     router.push("/dashboard");
   } catch (error) {
     errorMsg.value = "Couldn't reach the server. Check your connection and try again.";
   } finally {
