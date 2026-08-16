@@ -15,6 +15,7 @@ func CreateTask(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"error": "Can not created the task",
 		})
+		return
 	}
 	if err := database.DB.Create(&task).Error; err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -89,6 +90,8 @@ func UpdateTask(ctx *gin.Context) {
 	task.Title = updateData.Title
 	task.Description = updateData.Description
 	task.Complete = updateData.Complete
+	task.ReminderEnabled = updateData.ReminderEnabled
+	task.ReminderAt = updateData.ReminderAt
 
 	if err := database.DB.Save(&task).Error; err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -98,6 +101,22 @@ func UpdateTask(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, task)
+}
+func GetScheduledTasks(ctx *gin.Context) {
+	var tasks []models.Task
+
+	if err := database.DB.
+		Where("reminder_enabled = ?", true).
+		Order("reminder_at ASC").
+		Find(&tasks).Error; err != nil {
+
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Could not get scheduled tasks",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, tasks)
 }
 func DeleteTask(ctx *gin.Context) {
 

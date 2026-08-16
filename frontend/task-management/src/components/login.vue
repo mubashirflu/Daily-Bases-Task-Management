@@ -80,7 +80,7 @@ async function login() {
       errorMsg.value = data.error || "Couldn't log you in. Check your details and try again.";
       return;
     } 
-     localStorage.setItem("token", data.token);
+     localStorage.setItem("token", response.data.token);
 
     // console.log("TOKEN SAVED:", localStorage.getItem("token"));
      router.push("/dashboard");

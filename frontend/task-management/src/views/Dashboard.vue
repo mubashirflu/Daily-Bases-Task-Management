@@ -1,160 +1,6 @@
-<!-- <script setup>
-import { onMounted, ref, computed } from "vue";
-
-const tasks = ref([]);
-const loadingTasks = ref(true);
-
-const title = ref("");
-const description = ref("");
-const adding = ref(false);
-const errorMsg = ref("");
-
-const total = computed(() => tasks.value.length);
-
-const completed = computed(
-  () => tasks.value.filter((t) => t.complete).length
-);
-
-const percent = computed(() =>
-  total.value === 0
-    ? 0
-    : Math.round((completed.value / total.value) * 100)
-);
-
-// SVG ring
-const ringRadius = 22;
-const ringCircumference = 2 * Math.PI * ringRadius;
-
-const ringOffset = computed(
-  () =>
-    ringCircumference -
-    (percent.value / 100) * ringCircumference
-);
-
-async function getTasks() {
-  const token = localStorage.getItem("token");
-
-  const response = await fetch("http://localhost:8080/api/tasks", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  const data = await response.json();
-
-  console.log("TASK RESPONSE:", data);
-
-  if (!response.ok) {
-    console.error("TASK ERROR:", data);
-    return;
-  }
-
-  // yahan apne tasks set karo
-  console.log(data);
-}
-
-async function addTask() {
-  errorMsg.value = "";
-
-  if (!title.value.trim()) {
-    errorMsg.value = "Give the task a title before adding it.";
-    return;
-  }
-
-  try {
-    adding.value = true;
-
-    const response = await fetch(
-      "http://localhost:8080/api/tasks",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: title.value,
-          description: description.value,
-          complete: false,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to add task");
-    }
-
-    const newTask = await response.json();
-
-    tasks.value.unshift(newTask);
-
-    title.value = "";
-    description.value = "";
-  } catch (error) {
-    errorMsg.value =
-      error.message || "Couldn't add that task. Try again.";
-  } finally {
-    adding.value = false;
-  }
-}
-
-async function deleteTask(id) {
-  try {
-    const response = await fetch(
-      `http://localhost:8080/api/tasks/${id}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to delete task");
-    }
-
-    tasks.value = tasks.value.filter(
-      (task) => task.id !== id
-    );
-  } catch (error) {
-    errorMsg.value =
-      error.message || "Couldn't delete that task. Try again.";
-  }
-}
-
-async function toggleTask(task) {
-  try {
-    const response = await fetch(
-      `http://localhost:8080/api/tasks/${task.id}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: task.title,
-          description: task.description,
-          complete: !task.complete,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to update task");
-    }
-
-    task.complete = !task.complete;
-  } catch (error) {
-    errorMsg.value =
-      error.message || "Couldn't update that task. Try again.";
-  }
-}
-
-onMounted(() => {
-  getTasks();
-});
-</script> -->
-
 <script setup>
 import { onMounted, ref, computed } from "vue";
+import { useRouter } from "vue-router";
 
 const tasks = ref([]);
 const loadingTasks = ref(true);
@@ -429,6 +275,12 @@ async function toggleTask(task) {
       "Couldn't update that task. Try again.";
   }
 }
+const router=useRouter();
+function logout(){
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  router.push('/login')
+}
 
 // =========================
 // PAGE LOAD
@@ -444,55 +296,63 @@ onMounted(() => {
     <!-- Header -->
     <header class="topbar">
       <div class="topbar-inner">
-
         <div class="brand-mark">
           <span class="brand-dot"></span>
           Tally
         </div>
 
-        <div
-          class="tally-counter"
-          role="status"
-          aria-live="polite"
-        >
-          <svg
-            class="ring"
-            width="52"
-            height="52"
-            viewBox="0 0 52 52"
-            aria-hidden="true"
+        <div class="header-actions">
+          <div
+            class="tally-counter"
+            role="status"
+            aria-live="polite"
           >
-            <circle
-              cx="26"
-              cy="26"
-              r="22"
-              class="ring-track"
-            />
+            <svg
+              class="ring"
+              width="52"
+              height="52"
+              viewBox="0 0 52 52"
+              aria-hidden="true"
+            >
+              <circle
+                cx="26"
+                cy="26"
+                r="22"
+                class="ring-track"
+              />
 
-            <circle
-              cx="26"
-              cy="26"
-              r="22"
-              class="ring-fill"
-              :stroke-dasharray="ringCircumference"
-              :stroke-dashoffset="ringOffset"
-            />
-          </svg>
+              <circle
+                cx="26"
+                cy="26"
+                r="22"
+                class="ring-fill"
+                :stroke-dasharray="ringCircumference"
+                :stroke-dashoffset="ringOffset"
+              />
+            </svg>
 
-          <div class="tally-numbers">
-            <span class="tally-count">
-              {{ completed }}
-              <span class="tally-of">
-                /{{ total }}
+            <div class="tally-numbers">
+              <span class="tally-count">
+                {{ completed }}
+                <span class="tally-of">
+                  /{{ total }}
+                </span>
               </span>
-            </span>
 
-            <span class="tally-label">
-              done
-            </span>
+              <span class="tally-label">
+                done
+              </span>
+            </div>
           </div>
-        </div>
 
+          <button
+            type="button"
+            class="logout-btn"
+            @click="logout"
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </header>
 
@@ -775,6 +635,23 @@ onMounted(() => {
   font-weight: 700;
   font-size: 19px;
   color: var(--ink);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logout-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .brand-dot {
